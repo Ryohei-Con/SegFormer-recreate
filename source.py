@@ -101,8 +101,18 @@ class DWConv(nn.Module):
 
 class OverlapPatchMerging(nn.Module):
     def __init__(self, in_channel, out_channel, padding, kernel, stride):
+        """
+        一般のViTのようなパッチ化はしないことに注意
+
+        Args:
+            in_channel (int)
+            out_channel (int)
+            padding (int)
+            kernel (int)
+            stride (int)
+        """
         super().__init__()
-        self.proj = nn.Conv2d(in_channel, out_channel, kernel_size=kernel, stride=stride)
+        self.proj = nn.Conv2d(in_channel, out_channel, kernel_size=kernel, stride=stride, padding=padding)
         self.norm = nn.LayerNorm([out_channel])
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, int, int]:
@@ -132,10 +142,7 @@ class Block(nn.Module):
         x: (Batch, Length, Emb_dim)
         """
         x = self.dropout(self.attention(self.norm1(x), h, w)) + x
-        x_ = self.dropout(self.mlp(self.norm2(x), h, w))
-        print(f"x-size at Block: {x.size()}")
-        print(f"x_-size at Block: {x_.size()}")
-        x = x_ + x
+        x = self.dropout(self.mlp(self.norm2(x), h, w)) + x
         return x  # (Batch, Length, Emb_dim)
 
 
@@ -245,7 +252,7 @@ class TrainerConfig(BaseModel):
 
 
 if __name__ == "__main__":
-    x = torch.ones((8, 3, 512, 512))
+    x = torch.ones((8, 3, 480, 640))
     config = TrainerConfig(
         dims=(10, 16, 20, 24, 30),
         depths=(2, 2, 2, 2),
